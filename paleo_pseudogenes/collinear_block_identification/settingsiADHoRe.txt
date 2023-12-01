@@ -1,0 +1,15 @@
+
+blast_table=table.txt
+cluster_type=colinear
+prob_cutoff=0.01
+multiple_hypothesis_correction=FDR
+gap_size=35
+cluster_gap=40
+q_value=0.75
+anchor_points=3
+alignment_method=gg2
+max_gaps_in_alignment=40
+output_path=output
+number_of_threads=4
+verbose_output=true
+level_2_only=false
