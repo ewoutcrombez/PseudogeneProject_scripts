@@ -2,7 +2,7 @@
 #
 #SBATCH -p all # partition (queue)
 #SBATCH -c 1 # number of cores
-#SBATCH --mem 8G # memory pool for all cores
+#SBATCH --mem 6G # memory pool for all cores
 #SBATCH -o slurm.%j_anchorpoint_pid.out # STDOUT
 #SBATCH -e slurm.%j_anchorpoint_pid.err # STDERR
 
@@ -10,7 +10,7 @@
 # First I need to split up the anchorpoint file in smaller files to run in parallel
 # To do this I use "split_file $dir/anchorpoints.txt 10"
 # Pseudogene anchorpoints need to be removed (for file in $(ls anchorpoints.txt.*); do echo $file; grep -v "Pseudogene" $file > tmp && mv tmp $file ; done)
-# Then I use "sbatch --array=0-9 anchorpoint_divergence.sh" to run the script in parallel
+# Then I use "sbatch --array=0-9 summary_anchorpairs.sh" to run the script in parallel
 
 # start date of script
 date
@@ -34,4 +34,3 @@ end=`date +%s`
 
 runtime=$((end-start))
 echo "Script executed in $runtime seconds or $(($runtime/60)) minutes!"
-

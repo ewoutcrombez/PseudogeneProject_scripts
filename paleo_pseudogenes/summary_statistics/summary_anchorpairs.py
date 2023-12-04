@@ -98,7 +98,7 @@ for line in open(anchor_points):
         length_aligned_prot = results_prot[2]
 
         # Change fasta to axt
-        command = ["fasta_to_axt.pl", "tmp/tmp_alignment_NT_%s_%s.fa"%(species, split), "tmp/mp_alignment_%s_%s"%(species, split)]
+        command = ["fasta_to_axt.pl", "tmp/tmp_alignment_NT_%s_%s.fa"%(species, split), "tmp/tmp_alignment_%s_%s"%(species, split)]
         result = subprocess.run(command, stdout=subprocess.PIPE)
 
         # Run KaKs_Calculator
