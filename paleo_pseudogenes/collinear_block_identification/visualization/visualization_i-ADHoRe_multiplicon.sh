@@ -7,7 +7,7 @@ species=$1
 multiplicon=$2 # number of multiplicon
 
 ## Directories to use
-iadhore_folder="/scratch/recent_wgds/paleo_polyploids/collinearity/i-adhore/with_middle_filtering_level2_false/$species"
+iadhore_folder="/scratch/recent_wgds/paleo_polyploids/collinearity/i-adhore/no_introns/$species"
 
 ## Get info about multiplicon
 species1=$(awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print $2}' $iadhore_folder/output/multiplicons.txt)
