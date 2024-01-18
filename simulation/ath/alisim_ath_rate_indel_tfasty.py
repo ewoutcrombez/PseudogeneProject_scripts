@@ -66,9 +66,9 @@ for cds in cds_seq:
           # Align ancestral and evolved CDS sequence using tfasty
           command = ["tfasty", "-m", "3" , "-Q", "-3",
                       "tmp/tmp_0_%s_prot.fa"%split, "tmp/tmp_%s_%s.evolved.fa"%(i, split),
-                      "-O", "tmp/tmp_alignment_AA_%s_%s.fa"%(i, split)]        
+                      "-O", "tmp/tmp_alignment_AA_%s_%s.txt"%(i, split)]        
           result = subprocess.run(command, stdout=subprocess.PIPE)
-  
+          print(result.stdout.decode("utf-8"), flush=True)
           # Parse the results of tfasty
           ancestor = False
           ancestor_prot_seq = ""
@@ -79,8 +79,10 @@ for cds in cds_seq:
           evolved_seqs = {}
           match_nr = 1
           match = "match" + str(match_nr)
-          for line in open("tmp/tmp_alignment_AA_%s_%s.fa"%(i, split)):
+          for line in open("tmp/tmp_alignment_AA_%s_%s.txt"%(i, split)):
               # Get statistics of the alignment
+              if line.startswith("A_evolved"):
+                  e_val = line.strip().split(" ")[-1]
               if line.startswith("Smith-Waterman score"):
                   scores = line.strip().split(" ")
                   scores = [x for x in scores if x != ""]
@@ -117,17 +119,18 @@ for cds in cds_seq:
                   ancestor_prot_seq += line.strip()
               if evolved:
                   evolved_prot_seq += line.strip()
+
           # Save the last match
           ancestor_prot_seq = ancestor_prot_seq.replace(">A ..", "")
           ancestor_seqs[match] = ancestor_prot_seq
           evolved_prot_seq = evolved_prot_seq.replace(">A_evol ..", "")
           evolved_seqs[match] = evolved_prot_seq
-      
+    
           # Sort the different matches by their start position
           stats = dict(sorted(stats.items(), key = lambda x: x[1][3]))
           ancestor_seqs = dict(sorted(ancestor_seqs.items(), key = lambda x: list(stats.keys()).index(x[0])))
           evolved_seqs = dict(sorted(evolved_seqs.items(), key = lambda x: list(stats.keys()).index(x[0])))
-  
+
           # If there are matches that overlap, pick the longest match
           if len(stats) > 1:
               for match in list(stats.keys()):
@@ -143,42 +146,42 @@ for cds in cds_seq:
                               del stats[match]
                               del ancestor_seqs[match]
                               del evolved_seqs[match]
-                          
+                        
                           else:
                               # remove the previous match
                               print("Removed match %s"%list(stats.keys())[list(stats.keys()).index(match) - 1], flush=True)
                               del stats[list(stats.keys())[list(stats.keys()).index(match) - 1]]
                               del ancestor_seqs[list(stats.keys())[list(stats.keys()).index(match) - 1]]
                               del evolved_seqs[list(stats.keys())[list(stats.keys()).index(match) - 1]]
-  
+
           # Overlap is the sum of the overlap of the different matches
           overlap = sum([stats[match][2] for match in stats])
           # Calculate the weighted average statistics of the different matches
           ident = sum((stats[match][2] / overlap) * stats[match][0] for match in stats)
           similarity = sum((stats[match][2] / overlap) * stats[match][1] for match in stats)
-  
+
           # Combine the different matches into one sequence
           ancestor_prot_seq = "".join(list(ancestor_seqs.values()))
           evolved_prot_seq = "".join(list(evolved_seqs.values()))
-  
+
           # Convert the aligned ancestral and evolved protein sequence to a Biopython sequence object
           ancestor_prot_seq = Seq(ancestor_prot_seq)
           evolved_prot_seq = Seq(evolved_prot_seq)
-  
+
           # Calculate percent identity of ancestral and evolved protein
           result_prot = calculate_percentages(ancestor_prot_seq, evolved_prot_seq)
           percent_identity_prot = result_prot[0]
           fraction_prot = result_prot[1]
           length_aligned_prot = result_prot[2]
-  
+
           # Get number of frameshifts
           num_fs = evolved_prot_seq.count("\\")
           num_fs += evolved_prot_seq.count("/")
           # Get number of stop codons
           num_stop = evolved_prot_seq.count("*")
-          
+        
           # Print the results
-          result_str = cds + "\t" + str(prot_len) + "\t" + str(i) + "\t" + str(percent_identity_prot) + "\t" + str(fraction_prot) + "\t" + str(length_aligned_prot) + "\t" + str(num_fs) + "\t" + str(num_stop) + "\t" + str(ident) + "\t" + str(similarity) +  "\t" + str(overlap) + "\t" + str(length_aligned_prot / prot_len) + "\n"
+          result_str = cds + "\t" + str(prot_len) + "\t" + str(i) + "\t" + str(percent_identity_prot) + "\t" + str(fraction_prot) + "\t" + str(length_aligned_prot) + "\t" + str(num_fs) + "\t" + str(num_stop) + "\t" + str(ident) + "\t" + str(similarity) +  "\t" + str(overlap) + "\t" + str(length_aligned_prot / prot_len) + "\t" + e_val + "\n"
           print(result_str, flush=True)
           # Write the result to a file
           with open("result_sim_%s.tsv"%split, "a") as f:
