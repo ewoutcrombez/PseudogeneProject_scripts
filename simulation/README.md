@@ -1,12 +1,5 @@
 # Simulations
 
-## ath_no_indel
-
-Input: selection of *Arabidopsis* CDS
-Spontaneous mutation rate: *Arabidopsis* (7 x 10-9 substitution per site per generation of 1 year)
-Indels: NO
-Alignment program: Alignment using tfasty
-
 ## ath
 
 Input: selection of *Arabidopsis* CDS

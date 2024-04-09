@@ -17,7 +17,7 @@ blastp <- blastp %>% filter(X1 != X2)
 blastp <- blastp %>% select(X1, X2) %>%
   distinct()
 
-psg <- read_tsv(stringr::str_glue("filtering/{species}_filtered_low_pgenes_unprocessed.txt"),
+psg <- read_tsv(stringr::str_glue("/scratch/recent_wgds/paleo_polyploids/collinearity/filtered_no_intron/{species}_filtered_no_intronic.txt"),
                 col_names = FALSE) %>%
   select(X5, X15) %>%
   rename(X1 = X5, X2 = X15)
@@ -25,5 +25,5 @@ psg <- read_tsv(stringr::str_glue("filtering/{species}_filtered_low_pgenes_unpro
 table <- rbind(blastp, psg)
 
 
-write_tsv(table, stringr::str_glue("collinearity/i-adhore/with_middle_filtering_level2_false/{species}/table.txt"),
+write_tsv(table, stringr::str_glue("collinearity/i-adhore/no_introns2/{species}/table.txt"),
           col_names = FALSE)

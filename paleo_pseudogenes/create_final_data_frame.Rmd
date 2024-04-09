@@ -1,0 +1,159 @@
+---
+title: "Create final results data frame"
+author: "Ewout Crombez"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# default libraries to always include
+library(tidyverse)
+library(here)
+gc()
+```
+
+## Aim
+
+Create data frame which includes all data of pseudogenes
+
+## Data
+
+```{r load_data, message = FALSE}
+# load in data
+pseudogenes <- read_tsv(
+  "pgenes_full_filtered.txt",
+  col_names = c("chrom", "start", "end", "orientation",
+                "parent_gene", "fraction_parent_gene", "insertion",
+                "deletion", "shift", "stop", "e-val", "ident",
+                "polya", "type", "pseudogene_id", "length_pseudogene", 
+                "species")) %>%
+  mutate(species = str_replace(species, "_", " "))
+
+species_char <- read_tsv(
+  "GeneralCharacteristicsSpecies.tsv",
+  col_names = TRUE)
+
+df <- left_join(pseudogenes, species_char, by = "species")
+
+df$species <- factor(df$species, levels =
+                       c("Glycine max", "Malus domestica", "Zea mays",
+                         "Brassica oleracea", "Brassica rapa", "Populus trichocarpa",
+                         "Arabidopsis thaliana", "Solanum lycopersicum", "Oryza sativa",
+                         "Sorghum bicolor", "Vitis vinifera", "Amborella trichopoda"))
+
+# re-assessed statistics + K-values
+stats <- read_tsv(
+   "results_all_final.tsv",
+   col_names = c("pseudogene_id", "parent_gene", "perc_id_cds", "fraction_cds",
+                 "length_aligned_cds", "perc_id_prot", "fraction_prot",
+                 "length_aligned_prot", "Ka", "Ks", "Ka/Ks", "p-value",
+                 "num_fs", "num_stop", "species")) %>%
+   mutate(species = str_replace(species, "_", " "))
+ 
+df <- left_join(df, stats, by = c("species", "pseudogene_id", "parent_gene"))
+
+
+WGM_pseudogenes <- read_tsv(
+  "WGM_pgenes.txt",
+  col_names = c("pseudogene_id", "species")) %>%
+  mutate(wgm = "WGM-derived") %>%
+  distinct() %>%
+  mutate(species = str_replace(species, "_", " "))
+
+# add WGM inference information
+df <- left_join(df, WGM_pseudogenes, by = 
+                           c("pseudogene_id", "species")) %>%
+  distinct()
+
+df <- df %>%
+  mutate(type = ifelse(type == "DUP", "SSD-derived \u03a8's",
+                       ifelse(type == "FRAG", "Fragmented \u03a8's",
+                              ifelse(type == "PSSD", "Retro-transposed \u03a8's", NA)))) %>%
+  rename(Type = type) %>%
+  mutate(Type_original = Type) %>%
+  mutate(Type = ifelse(
+  is.na(wgm), Type, "WGM-derived \u03a8's"))
+
+df$Type <-
+  factor(df$Type, levels =
+           c("WGM-derived \u03a8's", "SSD-derived \u03a8's",
+             "Fragmented \u03a8's", "Retro-transposed \u03a8's"))
+
+write_tsv(df, here("pseudogene_df.tsv"))
+```
+
+## With anchorpairs
+
+```{r}
+# Combine estimates for anchorpairs and pseudogene-gene pairs
+anchorpairs <- read_tsv("all_results_anchorpoints.txt",
+                        col_names = c("gene1", "prot_len1", "pseudogene/gene2", "prot_len2",
+                                      "perc_id_cds", "fraction_cds", "length_aligned_cds",
+                                      "ident", "fraction_parent_gene", "length_aligned_prot",
+                                      "Ka", "Ks", "Ka/Ks", "p-value", "species")) %>%
+  mutate(pair = "anchorpair", wgm = "WGM-derived", Type = "WGM-derived duplicate genes") %>%
+  select(-c(prot_len1, prot_len2))
+psg_gene_pair <- df %>%
+  select("parent_gene", "pseudogene_id","perc_id_cds", "fraction_cds", 
+         "length_aligned_cds", "ident", "fraction_parent_gene", 
+         "length_aligned_prot",
+         "Ka", "Ks", "Ka/Ks", "p-value", "species", "wgm", "Type") %>%
+  rename(gene1 = parent_gene, `pseudogene/gene2` = pseudogene_id) %>%
+  mutate(pair = "pseudogene-gene pair")
+
+aps_vs_psg <- rbind(anchorpairs, psg_gene_pair) %>%
+  mutate(species = str_replace(species, "_", " ")) %>%
+  left_join(species_char, by = "species")
+
+aps_vs_psg$species <- factor(aps_vs_psg$species, levels =
+                       c("Glycine max", "Malus domestica", "Zea mays",
+                         "Brassica oleracea", "Brassica rapa", "Populus trichocarpa",
+                         "Arabidopsis thaliana", "Solanum lycopersicum", "Oryza sativa",
+                         "Sorghum bicolor", "Vitis vinifera", "Amborella trichopoda"))
+aps_vs_psg$Type <- factor(aps_vs_psg$Type, levels = 
+                            c("WGM-derived duplicate genes",
+                              "WGM-derived \u03a8's",
+                              "SSD-derived \u03a8's", "Fragmented \u03a8's", 
+                              "Retro-transposed \u03a8's"))
+
+write_tsv(aps_vs_psg, here("aps_and_psgs_df.tsv"))
+
+# add multiplicon information
+multiplicons <- 
+  read_tsv("multiplicons.txt", 
+           col_names = FALSE) %>%
+  select(X1, X7, X15) %>%
+  rename(multiplicon = X1, level = X7, species = X15)
+anchorpoints <- 
+  read_tsv("anchorpoints.txt", 
+           col_names = FALSE) %>% 
+  select(X2, X4, X5, X9) %>%
+  rename(multiplicon = X2, g1 = X4, g2 = X5, species = X9)
+anchorpoints <- left_join(multiplicons, anchorpoints, 
+                          by = c("multiplicon", "species")) %>%
+  mutate(species = str_replace(species, "_", " ")) %>%
+  mutate(g1_sorted = ifelse(startsWith(g1, "Pseudogene"), g2, g1),
+         g2_sorted = ifelse(startsWith(g1, "Pseudogene"), g1, g2)) %>%
+  select(-c(g1, g2)) %>% 
+  arrange(level) %>% 
+  distinct(species, g1_sorted, g2_sorted, .keep_all = TRUE)
+
+WGM_derived_data <- aps_vs_psg %>%
+  filter(wgm == "WGM-derived") %>%
+  left_join(anchorpoints,
+            by = c("species", "gene1" = "g1_sorted", "pseudogene/gene2" = "g2_sorted"))
+
+WGM_derived_data$level <- factor(WGM_derived_data$level, levels =
+                                   sort(unique(WGM_derived_data$level),
+                                        decreasing = TRUE))
+
+write_tsv(WGM_derived_data, here("wgm_aps_and_psgs_df.tsv"))
+```
+
+
+## Session information
+
+```{r, echo = FALSE}
+sessionInfo()
+```

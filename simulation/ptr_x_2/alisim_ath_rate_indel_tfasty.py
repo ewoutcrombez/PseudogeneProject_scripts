@@ -66,7 +66,7 @@ for cds in cds_seq:
             # Align ancestral and evolved CDS sequence using tfasty
             command = ["tfasty", "-m", "3" , "-Q", "-3",
                         "tmp/tmp_0_%s_prot.fa"%split, "tmp/tmp_%s_%s.evolved.fa"%(i, split),
-                        "-O", "tmp/tmp_alignment_AA_%s_%s.fa"%(i, split)]        
+                        "-O", "tmp/tmp_alignment_AA_%s_%s.txt"%(i, split)]        
             result = subprocess.run(command, stdout=subprocess.PIPE)
 
             # Parse the results of tfasty
@@ -79,8 +79,10 @@ for cds in cds_seq:
             evolved_seqs = {}
             match_nr = 1
             match = "match" + str(match_nr)
-            for line in open("tmp/tmp_alignment_AA_%s_%s.fa"%(i, split)):
+            for line in open("tmp/tmp_alignment_AA_%s_%s.txt"%(i, split)):
                 # Get statistics of the alignment
+                if line.startswith("A_evolved"):
+                    e_val = line.strip().split(" ")[-1]
                 if line.startswith("Smith-Waterman score"):
                     scores = line.strip().split(" ")
                     scores = [x for x in scores if x != ""]
@@ -177,7 +179,7 @@ for cds in cds_seq:
             num_stop = evolved_prot_seq.count("*")
             
             # Print the results
-            result_str = cds + "\t" + str(prot_len) + "\t" + str(i) + "\t" + str(percent_identity_prot) + "\t" + str(fraction_prot) + "\t" + str(length_aligned_prot) + "\t" + str(num_fs) + "\t" + str(num_stop) + "\t" + str(ident) + "\t" + str(similarity) +  "\t" + str(overlap) + "\t" + str(length_aligned_prot / prot_len) + "\n"
+            result_str = cds + "\t" + str(prot_len) + "\t" + str(i) + "\t" + str(percent_identity_prot) + "\t" + str(fraction_prot) + "\t" + str(length_aligned_prot) + "\t" + str(num_fs) + "\t" + str(num_stop) + "\t" + str(ident) + "\t" + str(similarity) +  "\t" + str(overlap) + "\t" + str(length_aligned_prot / prot_len) + "\t" + e_val + "\n"
             print(result_str, flush=True)
             # Write the result to a file
             with open("result_sim_%s.tsv"%split, "a") as f:

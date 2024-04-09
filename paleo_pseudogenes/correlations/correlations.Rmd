@@ -1,0 +1,197 @@
+---
+title: "Correlations between genome characteristics"
+author: "Ewout Crombez"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# default libraries to always include
+library(tidyverse)
+library(here)
+gc()
+```
+
+## Required libraries
+```{r required_libraries, message = FALSE}
+library(ggthemes)
+library(cowplot)
+library(ggrepel)
+library(ggtext)
+library(xlsx)
+library(corrr)
+```
+
+## Aim
+
+Assess correlations between different genome characteristics and pseudogene numbers
+
+## Data
+
+```{r load_data, message = FALSE}
+# load in data
+df <- read_tsv(
+  "/home/ewcro/shares/Projects/recentWGDs/pseudogene_df.tsv")
+
+te_char <- read_tsv(
+  "/home/ewcro/shares/Projects/recentWGDs/paleo_polyploids/TE/TE_size.txt",
+  col_names = TRUE) %>%
+  mutate(species = str_to_title(species)) %>%
+  mutate(species = str_replace(species, "_", " "))
+
+df <- left_join(df, te_char, by = "species")
+
+df_summ <- df %>% filter(wgm == "WGM-derived") %>%
+  group_by(species) %>%
+  summarize(number = n(),
+            `most_recent_WGM(Ks_mean)` = unique(`most_recent_WGM(Ks_mean)`),
+            `most_recent_WGM(mya)` = unique(`most_recent_WGM(mya)`),
+            num_genes = unique(`#genes`),
+            genome_size = unique(`genome_size(Mb)`),
+            gene_anchorpairs = unique(gene_anchorpairs_no_intron),
+            multiplicons = unique(multiplicons_no_intron),
+            TE_size = unique(TE_size),
+            TE_number = unique(TE_number),
+            LTR_size = unique(LTR_size),
+            LTR_number = unique(LTR_number),
+            LINE_size = unique(LINE_size),
+            SINE_size = unique(SINE_size),
+            SINE_number = unique(SINE_number),
+            retro_size = unique(retro_size),
+            retro_number = unique(retro_number)) %>%
+  mutate(label = paste0(species, " (", number, ")")) %>%
+  mutate(`most_recent_WGM(mya)` = 
+           ifelse(species == "Amborella trichopoda", NA, `most_recent_WGM(mya)`)) %>%
+  mutate(`most_recent_WGM(Ks_mean)` =
+           ifelse(species == "Amborella trichopoda", NA, `most_recent_WGM(Ks_mean)`)) %>%
+  mutate(`most_recent_WGM(Ks_mean)` = as.numeric(`most_recent_WGM(Ks_mean)`))
+
+df_summ <- df %>% group_by(species, Type) %>%
+  count() %>%
+  pivot_wider(names_from = Type, values_from = n) %>%
+  left_join(df_summ, by = "species")
+
+df_summ <- df %>% group_by(species) %>%
+  count() %>% left_join(df_summ, by = "species")
+
+# Combine estimates for anchorpairs and pseudogene-gene pairs
+WGM_derived_data <- read_tsv("wgm_aps_and_psgs_df.tsv")
+WGM_derived_data$species <- factor(WGM_derived_data$species, levels =
+                       c("Glycine max", "Malus domestica", "Zea mays",
+                         "Brassica oleracea", "Brassica rapa", "Populus trichocarpa",
+                         "Arabidopsis thaliana", "Solanum lycopersicum", "Oryza sativa",
+                         "Sorghum bicolor", "Vitis vinifera", "Amborella trichopoda"))
+WGM_derived_data$level <- factor(WGM_derived_data$level, levels =
+                                   sort(unique(WGM_derived_data$level),
+                                        decreasing = TRUE))
+
+# filter out (pseudo)genes that are not within the Ks boundaries of the WGM
+filtered_df_Ks <- WGM_derived_data %>%
+  filter(Ks >= min_Ks_own & Ks <= max_Ks_own)
+
+df_summ_Ks_filter <- filtered_df_Ks %>%
+  group_by(species, Type) %>% 
+  summarize(number = n(),
+            `most_recent_WGM(mya)` = unique(`most_recent_WGM(mya)`),
+            `most_recent_WGM(Ks_mean)` = unique(`most_recent_WGM(Ks_mean)`),
+            num_genes = unique(`#genes`),
+            genome_size = unique(`genome_size(Mb)`),
+            gene_anchorpairs = unique(gene_anchorpairs_no_intron),
+            multiplicons = unique(multiplicons_no_intron)) %>%
+  pivot_wider(names_from = Type, values_from = number) %>%
+  mutate(label = paste0(species, " (", `WGM-derived Ψ's`, ")"))
+```
+
+## Correlations
+
+```{r}
+calc_pval <- function(vec_a, vec_b){
+  cor.test(vec_a, vec_b)$p.value
+}
+
+cor_table <- df_summ %>% 
+  correlate(method = "spearman")
+
+pval_table <- df_summ %>% ungroup() %>%
+  select(-c(species, label)) %>%
+  colpair_map(calc_pval)
+
+sign_table <- pval_table %>%
+  mutate(across(colnames(pval_table %>%
+                           select(-term)), 
+                ~ ifelse( . <= 0.05, "SIGN", NA)))
+
+write.xlsx(cor_table, 
+           here("result_figures", "correlations", "correlation_table.xlsx"),
+           sheetName = "spearman_correlation")
+write.xlsx(pval_table, 
+           here("result_figures", "correlations", "correlation_table.xlsx"),
+           sheetName = "p-value_correlation",
+           append = TRUE)
+write.xlsx(sign_table, 
+           here("result_figures", "correlations", "correlation_table.xlsx"),
+           sheetName = "significance_correlation(p<=0.05)",
+           append = TRUE)
+```
+
+```{r}
+df_summ_Ks_filter$`most_recent_WGM(Ks_mean)` <- as.numeric(df_summ_Ks_filter$`most_recent_WGM(Ks_mean)`)
+cor_table_filteredKs <- df_summ_Ks_filter %>%
+  correlate(method = "spearman", use = "everything")
+
+pval_table_filteredKs <- df_summ_Ks_filter %>% ungroup() %>%
+  select(-c(species, label)) %>%
+  colpair_map(calc_pval)
+
+sign_table_filteredKs <- pval_table_filteredKs %>%
+  mutate(across(colnames(pval_table_filteredKs %>%
+                           select(-term)), 
+                ~ ifelse( . <= 0.05, "SIGN", NA)))
+
+write.xlsx(cor_table_filteredKs, 
+           here("result_figures", "correlations", "correlation_table_Ksfiltered.xlsx"),
+           sheetName = "spearman_correlation")
+write.xlsx(pval_table_filteredKs, 
+           here("result_figures", "correlations", "correlation_table_Ksfiltered.xlsx"),
+           sheetName = "p-value_correlation",
+           append = TRUE)
+write.xlsx(sign_table_filteredKs, 
+           here("result_figures", "correlations", "correlation_table_Ksfiltered.xlsx"),
+           sheetName = "significance_correlation(p<=0.05)",
+           append = TRUE)
+```
+
+## Plotting
+
+```{r}
+get_corr <- function(x, y, x_lab = "x", y_lab = "y"){
+  cor <- cor.test(x, y, method = "spearman")
+  rho <- cor$estimate
+  pval <- cor$p.value[[1]]
+
+  # create plot
+  df <- tibble(x, y)
+  plot <- ggplot(df, aes(x = x, y = y)) +
+    geom_point() +
+    xlab(x_lab) +
+    ylab(y_lab) +
+    theme_clean()
+  ggsave(here("result_figures", "correlations", paste0(x_lab, "VS",
+                                                       y_lab, ".jpeg")))
+  
+  return(tibble(variable1 = x_lab, variable2 = y_lab, rho = rho, pval = pval))
+}
+
+get_corr(df_summ$`Retro-transposed Ψ's`, df_summ$retro_number,
+         x_lab = "retropseudo_num", y_lab = "retrotransp_num")
+```
+
+
+## Conclusion
+
+## Session information
+
+```{r, echo = FALSE}
+sessionInfo()
+```

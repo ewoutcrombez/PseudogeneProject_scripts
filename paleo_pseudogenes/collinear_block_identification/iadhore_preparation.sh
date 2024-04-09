@@ -4,7 +4,9 @@ module load R
 species=$1
 plaza_name=$2
 
-mkdir i-adhore/with_middle_filtering_level2_false/$species
+echo "Working on $species"
+
+mkdir i-adhore/no_introns2/${species}
 echo "Get blast table"
 Rscript get_blast_table.R $species
 echo "Get genelists"
