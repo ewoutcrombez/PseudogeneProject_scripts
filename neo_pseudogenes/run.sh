@@ -22,10 +22,10 @@ multiplicon=$SLURM_ARRAY_TASK_ID
 # running as a single job
 #multiplicon=$1
 
-mkdir /scratch/recent_wgds/sugarcane/results/i-ADHoRe-run2/processing/$multiplicon
-awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print}' /scratch/recent_wgds/sugarcane/results/i-ADHoRe-run2/multiplicons.txt > /scratch/recent_wgds/sugarcane/results/i-ADHoRe-run2/processing/$multiplicon/check_multiplicon.txt
+mkdir $multiplicon
+awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print}' multiplicons.txt > processing/$multiplicon/check_multiplicon.txt
 
-if [ ! -s /scratch/recent_wgds/sugarcane/results/i-ADHoRe-run2/processing/$multiplicon/check_multiplicon.txt ]
+if [ ! -s processing/$multiplicon/check_multiplicon.txt ]
 then
     echo "Multiplicon does not exist!"
     exit 1
@@ -37,7 +37,7 @@ working_dir="/scratch/recent_wgds/sugarcane"
 # process i-ADHoRe results and filter lonely genes that still have a counterpart gene
 bash process_i-ADHoRe_multiplicon.sh $multiplicon $working_dir
 # if there are lonely genes, search for pseudogenes
-if [ -s $working_dir"/results/i-ADHoRe-run2/processing/"$multiplicon"/lonely_genes_segment_1.txt" ]
+if [ -s $working_dir"/processing/"$multiplicon"/lonely_genes_segment_1.txt" ]
 then
     # find remnants of pseudogenes
     bash find_remnants_segment1.sh $multiplicon $working_dir
@@ -49,7 +49,7 @@ else
     echo "No lonely genes in segment 1 found!"
 fi
 
-if [ -s $working_dir"/results/i-ADHoRe-run2/processing/"$multiplicon"/lonely_genes_segment_2.txt" ]
+if [ -s $working_dir"/processing/"$multiplicon"/lonely_genes_segment_2.txt" ]
 then
     # find remnants of pseudogenes
     bash find_remnants_segment2.sh $multiplicon $working_dir
