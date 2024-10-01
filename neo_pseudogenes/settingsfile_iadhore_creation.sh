@@ -1,5 +1,8 @@
 #!/bin/bash
-cd iadhore_input/genelists
+
+working_dir=$1
+
+cd $working_dir/data/iadhore_input/genelists
 
 # Create settingsfile
 for haplotype in $(ls)
@@ -11,6 +14,6 @@ do
 		path=$(realpath $file)
 		echo "$file $path" >> ../../settingsfile_iadhore.txt
 	done
-	cd -
+	cd $working_dir/data/iadhore_input/genelists
 done
 cat /scratch/recent_wgds/general_scripts/settingsiADHoRe.txt >> ../settingsfile_iadhore.txt

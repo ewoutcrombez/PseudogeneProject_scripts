@@ -68,9 +68,11 @@ write_tsv(bed_gene_only_hitnumber,
   col_names = FALSE)
 
 # Filter exon GFF file
-res_exon_gff <- read_tsv(exon_gff_file, col_names = FALSE,
-  show_col_types = FALSE)
-gff_exons <- res_exon_gff %>%
-  filter(str_detect(X10, str_c(res_tsv$query_id, collapse = "|")))
-write_tsv(gff_exons,
-  exon_gff_file, col_names = FALSE)
+if (nrow(res_tsv) > 0){
+  res_exon_gff <- read_tsv(exon_gff_file, col_names = FALSE,
+    show_col_types = FALSE)
+  gff_exons <- res_exon_gff %>%
+    filter(str_detect(X10, str_c(res_tsv$query_id, collapse = "|")))
+  write_tsv(gff_exons,
+    exon_gff_file, col_names = FALSE)
+}

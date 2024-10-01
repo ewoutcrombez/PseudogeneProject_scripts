@@ -7,8 +7,8 @@ working_dir=$2 # working directory
 
 ## Directories to use
 iadhore_input=$(echo $working_dir"/data/iadhore_input")
-iadhore_output=$(echo $working_dir"/results/i-ADHoRe-run2")
-proc_output=$(echo $working_dir"/results/i-ADHoRe-run2/processing")
+iadhore_output=$(echo $working_dir"/results/i-ADHoRe-run")
+proc_output=$(echo $working_dir"/results/i-ADHoRe-run/processing")
 data_folder=$(echo $working_dir"/data")
 
 ## Get info about multiplicon
@@ -79,7 +79,7 @@ then
 		then
 			exonerate -m affine:local $proc_output/$multiplicon/tmp_hits_cds $proc_output/$multiplicon/tmp_lonely_gene_cds --ryo %qi\\t%ti\\t%qS\\t%tS\\t%ql\\t%tl\\t%tab\\t%tae\\t%tal\\t%qab\\t%qae\\t%qal\\t%pi\\t%s\\t%et\\t%ei\\t%es\\t%em\\n --verbose 0 --showalignment no --showvulgar no >> $proc_output/$multiplicon/hits_${species2}_in_${species1}_${chromosome1}.tsv
 		fi
-	done < $proc_output/$multiplicon/lonely_g_${species2}_${chromosome2}.txt
+	done < $proc_output/$multiplicon/lonely_genes_segment_2.txt
 
 	if [ -s $proc_output/$multiplicon/hits_${species2}_in_${species1}_${chromosome1}.tsv ]
 	then
@@ -102,7 +102,8 @@ then
 			else
 				cp $proc_output/$multiplicon/result_table_${species2}_MACSE.tsv $proc_output/$multiplicon/result_table_${multiplicon}_MACSE.tsv
 			fi
-			rm $proc_output/$multiplicon/tmp_*
+			rm $proc_output/$multiplicon/tmp_*_cds
+			rm $proc_output/$multiplicon/tmp_hits
 			rm $proc_output/$multiplicon/gene_seq.fasta
 			rm $proc_output/$multiplicon/psg_seq_full.fasta
 			rm $proc_output/$multiplicon/gene_seq_NT.fasta

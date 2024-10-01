@@ -7,14 +7,14 @@ working_dir=$2 # working directory
 
 ## Directories to use
 iadhore_input=$(echo $working_dir"/data/iadhore_input")
-iadhore_output=$(echo $working_dir"/results/i-ADHoRe-run2")
-proc_output=$(echo $working_dir"/results/i-ADHoRe-run2/processing")
+iadhore_output=$(echo $working_dir"/results/i-ADHoRe-run")
+proc_output=$(echo $working_dir"/results/i-ADHoRe-run/processing")
 data_folder=$(echo $working_dir"/data")
 
 ## Get info about multiplicon
-species1=$(awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print $2}' $iadhore_output/multiplicons.txt)
+sub1=$(awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print $2}' $iadhore_output/multiplicons.txt)
 chromosome1=$(awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print $3}' $iadhore_output/multiplicons.txt)
-species2=$(awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print $5}' $iadhore_output/multiplicons.txt)
+sub2=$(awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print $5}' $iadhore_output/multiplicons.txt)
 chromosome2=$(awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print $6}' $iadhore_output/multiplicons.txt)
 
 # HIT SEARCH
@@ -22,84 +22,85 @@ chromosome2=$(awk -F "\t" -v multiplicon=$multiplicon '$1 == multiplicon {print 
 ## search hits of protein in the gene-masked regions of the other segment in the collinear block
 ### GFF result file as output
 echo "Find hits of lonely genes in the other segment!"
-exonerate -m protein2genome --maxintron 6000 -q $proc_output/$multiplicon/lonely_genes_prot_${species1}.fa -t $proc_output/$multiplicon/region_${species2}_${chromosome2}_gmasked.fa --showtargetgff yes --showquerygff no --verbose 0 --showalignment no --showvulgar no --ryo %qi\\t%ti\\t%qS\\t%tS\\t%ql\\t%tab\\t%tae\\t%tal\\t%qab\\t%qae\\t%qal\\t%pi\\t%s\\t%et\\t%ei\\t%es\\t%em\\n > $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_exonerate_result.txt
+exonerate -m protein2genome --maxintron 6000 -q $proc_output/$multiplicon/lonely_genes_prot_${sub1}.fa -t $proc_output/$multiplicon/region_${sub2}_${chromosome2}_gmasked.fa --showtargetgff yes --showquerygff no --verbose 0 --showalignment no --showvulgar no --ryo %qi\\t%ti\\t%qS\\t%tS\\t%ql\\t%tab\\t%tae\\t%tal\\t%qab\\t%qae\\t%qal\\t%pi\\t%s\\t%et\\t%ei\\t%es\\t%em\\n > $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_exonerate_result.txt
 
 ## Process exonerate result file
 echo "Process exonerate result file!"
-python3 process_exonerate_result.py $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_exonerate_result.txt $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.gff $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_results.tsv
+python3 process_exonerate_result.py $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_exonerate_result.txt $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.gff $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_results.tsv
 
 # # Select the best hit for each gene if they match the same region of the gene
 
-Rscript combine_and_get_best_hits.R $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_results.tsv $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.gff $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_selected.gff $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_results_proc.tsv
+Rscript combine_and_get_best_hits.R $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_results.tsv $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.gff $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_selected.gff $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_results_proc.tsv
 
 ## Process GFF file by merging hits that are within 6000 bp from each other and match the same gene
 echo "Process resulting GFF file!"
-python3 process_gff.py $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.gff $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_selected.gff $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_exons.gff
+python3 process_gff.py $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.gff $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_selected.gff $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_exons.gff
 
 ## Get hit table  (columns: hit name, hit length, hit strand, hit start, hit end, #exons)
 echo "Get hit table!"
-Rscript get_hit_table.R $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_exons.gff $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_hits.tsv
+Rscript get_hit_table.R $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_exons.gff $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_hits.tsv
 
 ## GFF to BED
-awk -F "\t" '$3 == "exon" {print $1"\t"$4-1"\t"$5"\t"$10}' $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_exons.gff  > $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.bed
+awk -F "\t" '$3 == "exon" {print $1"\t"$4-1"\t"$5"\t"$10}' $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_exons.gff  > $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.bed
 # make new column with the hit name
-awk -F "\t" '{print $1"\t"$2"\t"$3"\t"$4"\t"$4}' $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.bed | sed -r 's/_exon[0-9]+$//' > tmp && mv tmp $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.bed
+awk -F "\t" '{print $1"\t"$2"\t"$3"\t"$4"\t"$4}' $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.bed | sed -r 's/_exon[0-9]+$//' > tmp && mv tmp $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.bed
 
 # sort column based on start position if hits have the same name in column 5
-sort -k5,5 -k2,2n $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.bed | awk -F "\t" '{print $1"\t"$2"\t"$3"\t"$4}'> tmp && mv tmp $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.bed
+sort -k5,5 -k2,2n $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.bed | awk -F "\t" '{print $1"\t"$2"\t"$3"\t"$4}'> tmp && mv tmp $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.bed
 
 ## Get sequences of hits
 echo "Get sequences of hits!"
 ### Obtain sequences
-bedtools getfasta -fi $proc_output/$multiplicon/region_${species2}_${chromosome2}_gmasked.fa -bed $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.bed -name > $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.fa
+bedtools getfasta -fi $proc_output/$multiplicon/region_${sub2}_${chromosome2}_gmasked.fa -bed $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.bed -name > $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.fa
 
 ### Combine exons together per hit --> CDS
 echo "Combine exons together per hit!"
-python3 combine_exons.py $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.fa $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_cds.fa
+python3 combine_exons.py $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.fa $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_cds.fa
 
 ## Align sequences
 ### Remove files if already exists
-if [ -e $proc_output/$multiplicon/hits_${species2}_in_${species1}_${chromosome1}.tsv ]; then
-	rm $proc_output/$multiplicon/hits_${species2}_in_${species1}_${chromosome1}.tsv # if tsv file already exists, it should be removed, otherwise append to this
+if [ -e $proc_output/$multiplicon/hits_${sub2}_in_${sub1}_${chromosome1}.tsv ]; then
+	rm $proc_output/$multiplicon/hits_${sub2}_in_${sub1}_${chromosome1}.tsv # if tsv file already exists, it should be removed, otherwise append to this
 fi
-if [ -e $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.tsv ]; then
-	rm $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.tsv # if tsv file already exists, it should be removed, otherwise append to this
+if [ -e $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.tsv ]; then
+	rm $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.tsv # if tsv file already exists, it should be removed, otherwise append to this
 fi
 
-if [ -s $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_cds.fa ]
+if [ -s $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_cds.fa ]
 then
 	### Exonerate alignment
 	echo "Align pseudogene/remnant with lonely genes!"
 
 	while read lonely_gene
 	do 
-		samtools faidx $proc_output/$multiplicon/lonely_genes_cds_${species1}.fa $lonely_gene > $proc_output/$multiplicon/tmp_lonely_gene_cds
-		grep $lonely_gene $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_cds.fa | sed 's/>//' > $proc_output/$multiplicon/tmp_hits
-		samtools faidx $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_cds.fa -r $proc_output/$multiplicon/tmp_hits > $proc_output/$multiplicon/tmp_hits_cds
+		samtools faidx $proc_output/$multiplicon/lonely_genes_cds_${sub1}.fa $lonely_gene > $proc_output/$multiplicon/tmp_lonely_gene_cds
+		grep $lonely_gene $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_cds.fa | sed 's/>//' > $proc_output/$multiplicon/tmp_hits
+		samtools faidx $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_cds.fa -r $proc_output/$multiplicon/tmp_hits > $proc_output/$multiplicon/tmp_hits_cds
 		if [ -s $proc_output/$multiplicon/tmp_hits_cds ]
 		then
-			exonerate -m affine:local $proc_output/$multiplicon/tmp_hits_cds $proc_output/$multiplicon/tmp_lonely_gene_cds --ryo %qi\\t%ti\\t%qS\\t%tS\\t%ql\\t%tl\\t%tab\\t%tae\\t%tal\\t%qab\\t%qae\\t%qal\\t%pi\\t%s\\t%et\\t%ei\\t%es\\t%em\\n --verbose 0 --showalignment no --showvulgar no >> $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.tsv
+			exonerate -m affine:local $proc_output/$multiplicon/tmp_hits_cds $proc_output/$multiplicon/tmp_lonely_gene_cds --ryo %qi\\t%ti\\t%qS\\t%tS\\t%ql\\t%tl\\t%tab\\t%tae\\t%tal\\t%qab\\t%qae\\t%qal\\t%pi\\t%s\\t%et\\t%ei\\t%es\\t%em\\n --verbose 0 --showalignment no --showvulgar no >> $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.tsv
 		fi
-	done < $proc_output/$multiplicon/lonely_g_${species1}_${chromosome1}.txt
+	done < $proc_output/$multiplicon/lonely_genes_segment_1.txt
 
-	if [ -s $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.tsv ]
+	if [ -s $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.tsv ]
 	then
 		### Filter hits based on exonerate output
-		Rscript filter_hits.R $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}.tsv $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_hits.tsv $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_exons.gff $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_filtered.tsv
+		Rscript filter_hits.R $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}.tsv $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_hits.tsv $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_exons.gff $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_filtered.tsv
 
-		if [ -s $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_filtered.tsv ]
+		if [ -s $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_filtered.tsv ]
 		then
 			## Get result table based on exonerate results
-			Rscript get_result_table_segment.R $proc_output/$multiplicon/region_${species2}_${chromosome2}_start.txt $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_hits.tsv $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_filtered.tsv $proc_output/$multiplicon/result_table_${multiplicon}.tsv $proc_output/$multiplicon/hits_${species1}_in_${species2}_${chromosome2}_exons.gff $proc_output $multiplicon
+			Rscript get_result_table_segment.R $proc_output/$multiplicon/region_${sub2}_${chromosome2}_start.txt $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_hits.tsv $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_filtered.tsv $proc_output/$multiplicon/result_table_${multiplicon}.tsv $proc_output/$multiplicon/hits_${sub1}_in_${sub2}_${chromosome2}_exons.gff $proc_output $multiplicon
 
 			## Get result table based on MACSE results and classify pseudogenes
 			echo "Run MACSE and classify pseudogenes!"
-			python3 get_g_psg_alignments.py $working_dir $multiplicon $species1 $species2 $chromosome2
+			python3 get_g_psg_alignments.py $working_dir $multiplicon $sub1 $sub2 $chromosome2
 
-			#cat $proc_output/$multiplicon/result_table_${species1}_MACSE.tsv $proc_output/$multiplicon/result_table_${species2}_MACSE.tsv > $proc_output/$multiplicon/result_table_${multiplicon}_MACSE.tsv
-			cp $proc_output/$multiplicon/result_table_${species1}_MACSE.tsv $proc_output/$multiplicon/result_table_${multiplicon}_MACSE.tsv
+			#cat $proc_output/$multiplicon/result_table_${sub1}_MACSE.tsv $proc_output/$multiplicon/result_table_${sub2}_MACSE.tsv > $proc_output/$multiplicon/result_table_${multiplicon}_MACSE.tsv
+			cp $proc_output/$multiplicon/result_table_${sub1}_MACSE.tsv $proc_output/$multiplicon/result_table_${multiplicon}_MACSE.tsv
 
-			rm $proc_output/$multiplicon/tmp_*
+			rm $proc_output/$multiplicon/tmp_*_cds
+			rm $proc_output/$multiplicon/tmp_hits
 			rm $proc_output/$multiplicon/gene_seq.fasta
 			rm $proc_output/$multiplicon/psg_seq_full.fasta
 			rm $proc_output/$multiplicon/gene_seq_NT.fasta
