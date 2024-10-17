@@ -76,4 +76,9 @@ The results of the pseudogene search are then combined using the `get_final_pseu
 
 ## Get final result
 
-
+- `combine_all_results.R`: Combine results of collinear search, translocated genes and pseudogenes into one table
+- `search_collinear_missing.py`: Search for missing sub-genomes that are still in a collinear segment
+- `overlap_transloc_regions_genes.sh`: Update translocated genes results
+    - `find_translocated_genes_within_groups.py`: Search for translocated genes in collinear gene groups
+    - `update_result_translocation.py`: Update results table with translocation results
+- `summarize_and_plot_results.R`: Add information of missing sub-genomes and plot results

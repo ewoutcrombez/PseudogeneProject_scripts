@@ -7,6 +7,11 @@ working_dir = sys.argv[1]
 print("Loading lonely genes file...")
 lonely_genes = pd.read_csv(working_dir + "/results/i-ADHoRe-run/lonely_genes_all.txt", sep="\t", header=None)
 
+# initialize output file
+with open(working_dir + "/results/i-ADHoRe-run/lonely_between_missing_subg.txt", "w") as out:
+    out.write("gene\tsubg_gene\tcomparison\tgroup_id\n")
+    out.close()
+
 with(open(working_dir + "/results/i-ADHoRe-run/table_level_all.tsv")) as f:
     for line in f:
         # skip header
@@ -58,7 +63,11 @@ with(open(working_dir + "/results/i-ADHoRe-run/table_level_all.tsv")) as f:
                             lonely_between_missing_subg = lonely_between_missing_subg.values.tolist()
                             with open(working_dir + "/results/i-ADHoRe-run/lonely_between_missing_subg.txt", "a") as out:
                                 for row in lonely_between_missing_subg:
-                                    out.write(group_id + "\t" + str(row) + "\n")
+                                    gname = row[0]
+                                    subgs = sorted(row[1:3])
+                                    comparison = str(subgs[0]) + "-" + str(subgs[1])
+                                    subg_gene = gname[0]
+                                    out.write(gname + "\t" + subg_gene + "\t" + comparison + "\t" + str(group_id) + "\n")
                                 out.close()
                     print("Missing sub-genome " + missing + " is in collinear segment: " + str(in_collinear))
                     result = group_id + "\t" + missing + "\t" + str(in_collinear) + "\n"
